@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use these certificates, please cite the paper."
+title: "Numerical certificates for The Endogeneity of Miscalibration"
+abstract: "Independent floating-point and rigorous interval-arithmetic checks of the computed claims in The Endogeneity of Miscalibration: Impossibility and Escape in Scored Reporting."
+authors:
+  - family-names: "Lov\u00e9n"
+    given-names: "Lauri"
+    orcid: "https://orcid.org/0000-0001-9475-4839"
+  - family-names: "Tarkoma"
+    given-names: "Sasu"
+license: MIT
+version: "1.0.0"
+repository-code: "https://github.com/Future-Computing-Group/endomiscal-certificates"
+references:
+  - type: article
+    title: "The Endogeneity of Miscalibration: Impossibility and Escape in Scored Reporting"
+    authors:
+      - family-names: "Lov\u00e9n"
+        given-names: "Lauri"
+      - family-names: "Tarkoma"
+        given-names: "Sasu"
+    identifiers:
+      - type: other
+        value: "arXiv:2605.07671"

@@ -1,0 +1,14 @@
+{
+  "title": "Numerical certificates for The Endogeneity of Miscalibration",
+  "description": "Independent floating-point and rigorous interval-arithmetic (Arb) checks of the computed claims in The Endogeneity of Miscalibration: Impossibility and Escape in Scored Reporting.",
+  "license": {"id": "MIT"},
+  "upload_type": "software",
+  "version": "1.0.0",
+  "creators": [
+    {"name": "Lov\u00e9n, Lauri", "orcid": "0000-0001-9475-4839"},
+    {"name": "Tarkoma, Sasu"}
+  ],
+  "related_identifiers": [
+    {"identifier": "arXiv:2605.07671", "relation": "isSupplementTo", "scheme": "arxiv"}
+  ]
+}
