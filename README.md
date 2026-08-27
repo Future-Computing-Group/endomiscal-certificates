@@ -40,6 +40,10 @@ python3 run_all.py
 
 Each script prints one line per assertion and exits non-zero on the first failure. The full suite takes a few minutes, dominated by the randomized threshold search.
 
+## Citation
+
+Archived release: [10.5281/zenodo.22129805](https://doi.org/10.5281/zenodo.22129805) (concept DOI [10.5281/zenodo.22129804](https://doi.org/10.5281/zenodo.22129804), always resolving to the latest version).
+
 ## Licence
 
 MIT, see `LICENSE`.

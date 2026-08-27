@@ -10,6 +10,7 @@ authors:
     given-names: "Sasu"
 license: MIT
 version: "1.0.0"
+doi: "10.5281/zenodo.22129805"
 repository-code: "https://github.com/Future-Computing-Group/endomiscal-certificates"
 references:
   - type: article
