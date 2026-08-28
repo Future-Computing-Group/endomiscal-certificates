@@ -123,7 +123,7 @@ check("spike: Lambda* = 1.5084 (printed 5 s.f.)",
 ls_brier = lam_star(brier, r0_brier, "0.4", "0.09")
 check("brier: Lambda* = 2/m", bool((ls_brier - 2 / (r0_brier - arb(4) / 10)).abs_upper() < arb(1) / 10 ** 6), show(ls_brier))
 
-print("== rigorous chord at the printed anchor (lower bound on Lambda_c) ==")
+print("== rigorous two-sided enclosure of Lambda_c (chord supremum) ==")
 def ramp_at(gen, p_min, r0, ratio, a):
     return gen.D(arb(p_min), a) / arb(ratio)
 
@@ -148,6 +148,47 @@ check("spike: located anchor matches the printed a* = 0.4326 (4 d.p.)",
       bool((a_star - arb(4326) / 10000).abs_upper() < arb(1) / 10000), show(a_star))
 check("spike: chord at a* = 7.9902 (printed Lambda_c, 5 s.f.); rigorous LOWER bound on Lambda_c",
       bool((chord - arb(79902) / 10000).abs_upper() < arb(1) / 10000), show(chord))
+
+# Upper bound, closing the supremum from above so the printed value is enclosed on
+# both sides.  Two facts make it cheap.  On a box [a1,a2] both 1 - ramp(a) and
+# r_0 - a are DECREASING, so chord(a) <= N(a1)/(r_0 - a2) with the endpoints
+# evaluated as thin balls; putting a ball-valued anchor into the quotient instead
+# lets the anchor's dependency compound and the bound goes slack by three orders of
+# magnitude.  Near r_0 the quotient is 0/0, but there chord(a) is the MEAN of the
+# ramp slope s over [a, r_0], hence at most sup s on that interval.  Branch and
+# bound then discards every box whose upper bound falls below an attained chord.
+def lambda_c_upper(a_lo, a_hi, LB, depth=44, cap=4000, target=arb(2) / 10 ** 6):
+    boxes, best = [(a_lo, a_hi)], arb(0)
+    for _ in range(depth):
+        live, best = [], arb(0)
+        for (b1, b2) in boxes:
+            u = (1 - ramp_at(spike, "0.4", r0_spike, "0.2", b1)) / (r0_spike - b2)
+            if u.upper() < LB.lower():
+                continue                       # cannot contain the supremum
+            live.append((b1, b2))
+            if u.upper() > best.upper():
+                best = arb(u.upper())
+        if not live or bool(best - LB < target):
+            break
+        boxes = [(b1, arb(((b1 + b2) / 2).mid())) for b1, b2 in live] + \
+                [(arb(((b1 + b2) / 2).mid()), b2) for b1, b2 in live]
+        boxes = boxes[:cap]
+    return best
+
+DELTA = arb(1) / 100
+split = arb((r0_spike - DELTA).mid())
+lb_att = arb(chord.lower())
+ub_box = lambda_c_upper(arb(4) / 10, split, lb_att)
+ub_tail = arb(spike._G2(encl((r0_spike - DELTA).lower(), r0_spike.upper()))
+              * (encl((r0_spike - DELTA).lower(), r0_spike.upper()) - arb(4) / 10) / arb(2) * 10)
+ub_tail = arb(ub_tail.upper())
+UB = arb(max(ub_box.upper(), ub_tail.upper()))
+check("spike: Lambda_c enclosed from ABOVE (branch and bound + mean-value tail)",
+      bool(UB > lb_att), f"[{lb_att.str(10)}, {UB.str(10)}]")
+half_ulp = arb(1) / 20000
+check("spike: TWO-SIDED enclosure of Lambda_c confirms the printed 7.9902 (5 s.f.)",
+      bool(lb_att > arb(79902) / 10000 - half_ulp) and bool(UB < arb(79902) / 10000 + half_ulp),
+      f"width {float(UB.mid()) - float(lb_att.mid()):.2e}")
 ratio_53 = chord / ls_spike
 check("spike: Lambda_c/Lambda* = 5.30", bool((ratio_53 - arb(530) / 100).abs_upper() < arb(5) / 1000), show(ratio_53))
 
