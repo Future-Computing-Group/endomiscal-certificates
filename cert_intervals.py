@@ -172,7 +172,8 @@ def lambda_c_upper(a_lo, a_hi, LB, depth=44, cap=4000, target=arb(2) / 10 ** 6):
             break
         boxes = [(b1, arb(((b1 + b2) / 2).mid())) for b1, b2 in live] + \
                 [(arb(((b1 + b2) / 2).mid()), b2) for b1, b2 in live]
-        boxes = boxes[:cap]
+        assert len(boxes) <= cap, f"branch-and-bound live set {len(boxes)} exceeds the cap {cap}: the enclosure would not be sound"
+    assert boxes, "branch-and-bound live set is empty: no upper bound"
     return best
 
 DELTA = arb(1) / 100
@@ -251,4 +252,11 @@ check("brier curvature ratio = 1", bool((r_b - 1).abs_upper() < arb(1) / 10 ** 1
 check("log premium = 11.6% (printed 3 s.f.)", bool(((r_l / r_b - 1) * 100 - arb(116) / 10).abs_upper() < arb(5) / 100), show((r_l / r_b - 1) * 100))
 check("p^4 premium = 34.2% (printed 3 s.f.)", bool(((r_p4 / r_b - 1) * 100 - arb(342) / 10).abs_upper() < arb(5) / 100), show((r_p4 / r_b - 1) * 100))
 
+print("== rigorous shortfall-constant ratios rho/(1+sigma) at p_min = 0.4, r_0 = 0.7 (prop:score-selection) ==")
+sigma_p4 = 2 * m / r0_a                                              # m kappa'(r0)/kappa(r0) for kappa = 12 t^2
+sigma_log = (2 * r0_a - 1) * m / (r0_a * (1 - r0_a))                 # for kappa = 1/(t(1-t))
+q_p4 = (r_p4 / r_b) / (1 + sigma_p4)
+q_log = (r_l / r_b) / (1 + sigma_log)
+check("p^4 shortfall constant = 0.723 of Brier's (printed 3 s.f.)", bool((q_p4 - arb(723) / 1000).abs_upper() < arb(5) / 10 ** 4), show(q_p4))
+check("log shortfall constant = 0.710 of Brier's (printed 3 s.f.)", bool((q_log - arb(710) / 1000).abs_upper() < arb(5) / 10 ** 4), show(q_log))
 print("ALL PASS: rigorous enclosures")

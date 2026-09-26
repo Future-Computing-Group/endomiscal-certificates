@@ -22,13 +22,13 @@ def band_types(p_min, width, n_coarse=801, n_fine=2400):
     fine = np.linspace(max(0.0, p_min - 0.02), min(1.0, p_min + width + 0.02), n_fine)
     return np.unique(np.concatenate([coarse, fine]))
 
-def measure(gen, p_min, ratio, r0, lam, q_of_r=None, types=None, fine_r=None):
+def measure(gen, p_min, ratio, r0, lam, q_of_r=None, types=None, fine_r=None, density=None):
     rg_extra = fine_r
     if q_of_r is None:
         rg, qhat = C.lipschitz_envelope_under_ramp(gen, p_min, r0, ratio, lam,
                     rg=np.unique(np.concatenate([C.RGRID] + ([fine_r] if fine_r is not None else []))))
         q_of_r = lambda r, rg=rg, q=qhat: np.interp(r, rg, q)
-    gap, _, _ = C.welfare_gap(gen, p_min, ratio, q_of_r, types=types, extra_r=rg_extra)
+    gap, _, _ = C.welfare_gap(gen, p_min, ratio, q_of_r, types=types, extra_r=rg_extra, density=density)
     return gap
 
 print("== (1) Brier: exact closed form for the envelope gap ==")
@@ -41,6 +41,26 @@ for z in [0.3, 0.2, 0.1]:
     exact = (m ** 4 / ratio) * (2 * z - z * z) ** 3 / (24 * (1 - z) ** 2)
     C.check(f"zeta={z}: measured = exact closed form", abs(gap / exact - 1) < 0.01,
             f"measured={gap:.4e} exact={exact:.4e} ratio={gap/exact:.4f}")
+
+print("== (1b) non-uniform F: the leading constant scales by the density at p_min ==")
+# prop:below-threshold's upper constant carries f(p_min); the band shrinks to p_min as zeta -> 0, so
+# under a non-uniform density the envelope gap divided by the uniform-F gap tends to f(p_min). This
+# exhibits how F enters the constant (as a multiplier at the marginal type); the cubic rate itself is
+# checked in (1) and (2) under the uniform density.
+for fname, f in [("f(p)=2p", lambda p: 2.0 * np.asarray(p, dtype=float)),
+                 ("f(p)=2(1-p)", lambda p: 2.0 * (1.0 - np.asarray(p, dtype=float)))]:
+    f_pmin = float(f(p_min))
+    ratios = []
+    for z in [0.2, 0.1, 0.05]:
+        lam = lam_c * (1 - z)
+        types = band_types(p_min, m * z)
+        gap_f = measure(gen, p_min, ratio, r0, lam, types=types, density=f)
+        gap_u = measure(gen, p_min, ratio, r0, lam, types=types)
+        ratios.append(gap_f / gap_u)
+        print(f"    {fname} zeta={z}: gap_f/gap_uniform={ratios[-1]:.4f}  (f(p_min)={f_pmin:.2f})")
+    C.check(f"{fname}: gap ratio -> f(p_min) = {f_pmin:.2f} as zeta -> 0",
+            abs(ratios[-1] - f_pmin) < 0.02 and abs(ratios[-1] - f_pmin) < abs(ratios[0] - f_pmin),
+            f"ratios={[f'{x:.4f}' for x in ratios]}")
 
 print("== (2) general generators: leading constant + exponent ==")
 for gen, p_min, ratio, zs in [(C.quartic_mix(), 0.4, 0.09, [0.3, 0.2, 0.1]),
@@ -66,9 +86,9 @@ r0 = C.reserve(gen, p_min, ratio); m = r0 - p_min
 ls = C.lambda_star(gen, p_min, r0, ratio)
 sp = C.s_prime_r0(gen, p_min, r0, ratio)
 Gamma0 = float(gen.G1(r0) - gen.G1(p_min))
-Gamma1 = ratio * ls ** 2 / (ratio * ls ** 2 + Gamma0 * sp * m * ratio)   # beta=1; s' already /ratio
-# careful: s as defined = G''(r)(r-p_min)/ratio, so beta*Gamma_0*s'(r_0)*m with beta=1 uses sp*ratio? No:
-# the appendix's s'(r_0) is the derivative of s(r) = (beta/gamma) G''(r)(r-p_min), which IS our sp.
+# Gamma_1 is the constant the lower bound DEFINES from (Lambda*, s'(r_0), Gamma_0, m); it is evaluated
+# from those ingredients, each computed from the generator, and the search below asks whether any rule
+# in a finite family beats the bound it enters.
 Gamma1 = ratio * ls ** 2 / (ratio * ls ** 2 + Gamma0 * sp * m)
 C.check("Brier: Gamma_1 = 1/2 from its ingredients", abs(Gamma1 - 0.5) < 1e-6, f"Gamma1={Gamma1:.6f}")
 C.check("Brier/uniform: upper/lower constant ratio = 4", abs(1.0 / Gamma1 ** 2 - 4) < 1e-4)
@@ -89,7 +109,7 @@ for z in [0.2, 0.1]:
         g, _, _ = C.welfare_gap(gen, p_min, ratio, q, types=types, extra_r=fine_r)
         if g < best: best, best_desc = g, f"line d={delta:.2f}"
     # family 3: envelope with vertical scaling
-    for c in [0.97, 0.99, 1.01, 1.03]:
+    for c in [0.97, 0.99]:                        # c > 1 would leave the Lambda-Lipschitz class
         rg, qhat = C.lipschitz_envelope_under_ramp(gen, p_min, r0, ratio, lam,
                     rg=np.unique(np.concatenate([C.RGRID, fine_r])))
         q = lambda r, rg=rg, qh=qhat, c=c: np.clip(c * np.interp(r, rg, qh), 0.0, 1.0)

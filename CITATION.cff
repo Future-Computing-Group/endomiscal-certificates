@@ -9,8 +9,8 @@ authors:
   - family-names: "Tarkoma"
     given-names: "Sasu"
 license: MIT
-version: "1.1.0"
-doi: "10.5281/zenodo.22143871"
+version: "1.2.0"
+doi: "10.5281/zenodo.22983104"
 repository-code: "https://github.com/Future-Computing-Group/endomiscal-certificates"
 references:
   - type: article

@@ -5,7 +5,7 @@
     "id": "MIT"
   },
   "upload_type": "software",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "creators": [
     {
       "name": "Lovén, Lauri",
@@ -27,5 +27,5 @@
       "scheme": "doi"
     }
   ],
-  "doi": "10.5281/zenodo.22143871"
+  "doi": "10.5281/zenodo.22983104"
 }

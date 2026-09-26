@@ -84,12 +84,17 @@ def engineered_spike():
     return from_curvature("spike", lambda r: 2 + 100 * np.exp(-(((np.asarray(r, dtype=float)) - 0.45) / 0.02) ** 2))
 
 
-def random_gen(rng, i):
-    """Random admissible generator: positive mixture-of-bumps curvature."""
+def random_gen(rng, i, sigma_lo=0.05):
+    """Random admissible generator: positive mixture-of-bumps curvature.
+
+    Bump widths are drawn from [sigma_lo, 0.3]; widths below about 0.03 can place a
+    curvature spike strictly inside (p_min, r_0), which is what puts a draw in the
+    corner class Lambda_c > Lambda* of cor:lambda-star.
+    """
     c0 = rng.uniform(0.5, 3.0)
     nb = rng.integers(1, 4)
     mus = rng.uniform(0.1, 0.9, nb)
-    sigmas = rng.uniform(0.05, 0.3, nb)
+    sigmas = rng.uniform(sigma_lo, 0.3, nb)
     amps = rng.uniform(0.0, 15.0, nb)
     def gpp(r):
         r = np.asarray(r, dtype=float)
@@ -103,8 +108,14 @@ def random_gen(rng, i):
 # ------------------------------------------------------------------- objects
 def reserve(gen, p_min, ratio):
     """r_0 solving D(p_min, r_0) = ratio, by bisection on the defining D."""
-    if gen.D(p_min, 1.0 - (1e-12 if gen.interior else 0.0)) <= ratio:
-        return None                                   # not strictly feasible
+    if gen.interior:
+        pass                                          # C(1) = +inf: feasibility is automatic (ex:log-score)
+    else:
+        top = gen.D(p_min, 1.0)
+        if top < ratio:
+            return None                               # saturated regime: no reserve
+        if top == ratio:
+            return 1.0                                # weak-feasibility boundary r_0 = 1
     lo, hi = p_min, 1.0
     for _ in range(200):
         mid = 0.5 * (lo + hi)
@@ -121,10 +132,18 @@ def ramp(gen, p_min, r0, ratio, r):
 
 
 def lambda_c(gen, p_min, r0, ratio, n_a=80_000):
-    """Critical slope: sup over a in [p_min, r_0) of (1 - ramp(a)) / (r_0 - a)."""
-    a = np.linspace(p_min, r0 - 1e-9, n_a)
+    """Critical slope: sup over a in [p_min, r_0) of (1 - ramp(a)) / (r_0 - a).
+
+    The chord quotient is 0/0 at a = r_0 and its limit there is the tangency slope, so
+    the supremum is taken as the larger of the grid maximum over anchors at least one
+    grid step away from r_0 and the tangency slope itself; the anchor returned is r_0
+    when the tangency slope wins (tangency class).
+    """
+    a = np.linspace(p_min, r0 - (r0 - p_min) / n_a, n_a)
     vals = (1.0 - ramp(gen, p_min, r0, ratio, a)) / (r0 - a)
-    return float(np.max(vals)), float(a[int(np.argmax(vals))])
+    i = int(np.argmax(vals)); grid_max = float(vals[i])
+    tangent = lambda_star(gen, p_min, r0, ratio)
+    return (grid_max, float(a[i])) if grid_max > tangent else (tangent, float(r0))
 
 
 def lambda_star(gen, p_min, r0, ratio):
@@ -162,8 +181,12 @@ def induced(gen, p_min, ratio, q_vals, types, rgrid=None, chunk=64):
     return out
 
 
-def welfare_gap(gen, p_min, ratio, q_of_r, n_types=4001, rgrid=None, extra_r=None, types=None):
-    """W* - W(q) with Pi = (p - p_min), F uniform: both error channels, positive."""
+def welfare_gap(gen, p_min, ratio, q_of_r, n_types=4001, rgrid=None, extra_r=None, types=None, density=None):
+    """W* - W(q) with Pi = (p - p_min): both error channels, positive.
+
+    F is uniform on [0,1] unless `density` (a callable f(p)) is passed, in which
+    case the screening error is weighted by f as in eq:welfare-gap-identity.
+    """
     rg = RGRID if rgrid is None else rgrid
     if extra_r is not None:
         rg = np.unique(np.concatenate([rg, extra_r]))
@@ -172,8 +195,9 @@ def welfare_gap(gen, p_min, ratio, q_of_r, n_types=4001, rgrid=None, extra_r=Non
         types = types[(types > 1e-3) & (types < 1 - 1e-3)]
     types = types[np.abs(types - p_min) > 1e-9]       # exclude the F-null type
     tau = induced(gen, p_min, ratio, q_of_r(rg), types, rgrid=rg)
-    under = np.where(types > p_min, (1.0 - tau) * (types - p_min), 0.0)
-    false = np.where(types < p_min, tau * (p_min - types), 0.0)
+    f = np.ones_like(types) if density is None else np.asarray(density(types), dtype=float)
+    under = np.where(types > p_min, (1.0 - tau) * (types - p_min), 0.0) * f
+    false = np.where(types < p_min, tau * (p_min - types), 0.0) * f
     return float(np.trapezoid(under + false, types)), float(np.trapezoid(under, types)), float(np.trapezoid(false, types))
 
 

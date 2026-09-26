@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SCRIPTS = ["cert_tilt_identity.py", "cert_comparative_statics.py", "cert_kink_attainment.py",
-           "cert_critical_slope_iff.py", "cert_cubic_law.py", "cert_intervals.py"]
+SCRIPTS = sorted(p.name for p in HERE.glob("cert_*.py"))
+assert SCRIPTS, "no certificate scripts found beside run_all.py"
 
 def main():
     failed = []
