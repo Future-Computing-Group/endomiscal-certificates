@@ -46,7 +46,7 @@ Each script prints one line per assertion and exits non-zero on the first failur
 
 ## Citation
 
-Archived release: [10.5281/zenodo.22983104](https://doi.org/10.5281/zenodo.22983104) (concept DOI [10.5281/zenodo.22129804](https://doi.org/10.5281/zenodo.22129804), always resolving to the latest version).
+Archived release: [10.5281/zenodo.24380693](https://doi.org/10.5281/zenodo.24380693) (v1.3.1; v1.3.0 is [10.5281/zenodo.24006360](https://doi.org/10.5281/zenodo.24006360)). The manuscript cites the v1.2.0 record [10.5281/zenodo.22983104](https://doi.org/10.5281/zenodo.22983104) and the concept DOI [10.5281/zenodo.22129804](https://doi.org/10.5281/zenodo.22129804), which resolves to the latest of v1.0.0 to v1.2.0; the v1.3.x records were archived under a second concept DOI, [10.5281/zenodo.24006359](https://doi.org/10.5281/zenodo.24006359), and carry an isVersionOf relation to the original concept.
 
 ## Licence
 
